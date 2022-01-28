@@ -51,8 +51,8 @@ jobs:
         #   --array-properties "size=${{ steps.count_jobs.outputs.size }}" \
         #   --parameters "repoCommit=$GITHUB_SHA,repoBranch=main,repoSuffix=${{ steps.generate_suffix.outputs.suffix }},repoTarget=auto" \
         #   > out.json
-        echo ::set-output name=job_id::$(jq .jobId out.json)
-        echo ::set-output name=job_name::$(jq .jobName out.json)
+        echo ::set-output name=job_id::$(jq -r .jobId out.json)
+        echo ::set-output name=job_name::$(jq -r .jobName out.json)
 
     - name: Wait for jobs to finish
       id: wait_for_jobs
