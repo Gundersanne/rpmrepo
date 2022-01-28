@@ -52,6 +52,7 @@ jobs:
         #   --parameters "repoCommit=$GITHUB_SHA,repoBranch=main,repoSuffix=${{ steps.generate_suffix.outputs.suffix }},repoTarget=auto" \
         #   > out.json
         JOBID=$(jq -r .jobId out.json)
+        echo JOB ID $JOBID
         echo "::set-output name=job_id::$JOBID"
         echo "::set-output name=job_name::$(jq -r .jobName out.json)"
 
