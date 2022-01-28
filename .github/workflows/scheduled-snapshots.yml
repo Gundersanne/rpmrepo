@@ -35,20 +35,28 @@ jobs:
       run: |
         echo size ${{ steps.count_jobs.outputs.size }} sha ${GITHUB_SHA}
 
-        aws batch submit-job \
-          --job-name "snapshot-runner" \
-          --job-definition "rpmrepo-batch-snapshot-staging" \
-          --job-queue "rpmrepo-batch-staging" \
-          --timeout "attemptDurationSeconds=86400" \
-          --array-properties "size=${{ steps.count_jobs.outputs.size }}" \
-          --parameters "repoCommit=$GITHUB_SHA,repoBranch=main,repoSuffix=${{ steps.generate_suffix.outputs.suffix }},repoTarget=auto" \
-          > out.json
+        cat <<EOF > out.json
+        {
+            "jobArn": "arn:aws:batch:us-east-1:933752197999:job/5704d3ad-5f3c-40a7-b18a-09870d7197fc",
+            "jobName": "snapshot-runner",
+            "jobId": "4c6f63d0-628c-465f-808f-ed36f1e030c5"
+        }
+        EOF
+        # aws batch submit-job \
+        #   --job-name "snapshot-runner" \
+        #   --job-definition "rpmrepo-batch-snapshot-staging" \
+        #   --job-queue "rpmrepo-batch-staging" \
+        #   --timeout "attemptDurationSeconds=86400" \
+        #   --array-properties "size=${{ steps.count_jobs.outputs.size }}" \
+        #   --parameters "repoCommit=$GITHUB_SHA,repoBranch=main,repoSuffix=${{ steps.generate_suffix.outputs.suffix }},repoTarget=auto" \
+        #   > out.json
         echo ::set-output name=job_id::$(jq .jobId out.json)
         echo ::set-output name=job_name::$(jq .jobName out.json)
 
     - name: Wait for jobs to finish
       id: wait_for_jobs
       run: |
+        echo AAAAAAAAAAAAA ${{ steps.submit_job.job_id }}
         while true; do
           PENDING=$(aws batch list-jobs --array-job-id ${{ steps.submit_job.job_id }} --job-status PENDING | jq '.jobSummaryList | length')
           RUNNABLE=$(aws batch list-jobs --array-job-id ${{ steps.submit_job.job_id }} --job-status RUNNABLE | jq '.jobSummaryList | length')
@@ -70,40 +78,40 @@ jobs:
         echo ::set-output name=succeeded::$(jq '.jobSummaryList | length' failed.json)
         echo ::set-output name=failed::$(jq '.jobSummaryList | length' failed.json)
 
-    - name: Clone osbuild-composer repository
-      uses: actions/checkout@v2.3.4
-      with:
-        repository: osbuild/osbuild-composer
-        path: osbuild-composer
+    # - name: Clone osbuild-composer repository
+    #   uses: actions/checkout@v2.3.4
+    #   with:
+    #     repository: osbuild/osbuild-composer
+    #     path: osbuild-composer
 
-    - name: Update schutzfile and open PR
-      env:
-        GITHUB_TOKEN: ${{ secrets.SCHUTZBOT_GH_TOKEN }}
-      run: |
-        pushd osbuild-composer
-        sed -i -E 's/("baseurl": ".*)-[0-9]{8,12}\/?"/\1-${{ steps.generate_suffix.outputs.suffix }}"/g' Schutzfile
-        git diff
-        git config --unset-all http.https://github.com/.extraheader
-        git config user.name "schutzbot"
-        git config user.email "schutzbot@gmail.com"
-        git checkout -b snapshots-${{ steps.generate_suffix.outputs.suffix }}
-        git add Schutzfile
-        git commit -m "schutzfile: Update snapshots to ${{ steps.generate_suffix.outputs.suffix }}"
-        git push https://${{ secrets.SCHUTZBOT_GH_TOKEN }}@github.com/schutzbot/osbuild-composer.git
+    # - name: Update schutzfile and open PR
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.SCHUTZBOT_GH_TOKEN }}
+    #   run: |
+    #     pushd osbuild-composer
+    #     sed -i -E 's/("baseurl": ".*)-[0-9]{8,12}\/?"/\1-${{ steps.generate_suffix.outputs.suffix }}"/g' Schutzfile
+    #     git diff
+    #     git config --unset-all http.https://github.com/.extraheader
+    #     git config user.name "schutzbot"
+    #     git config user.email "schutzbot@gmail.com"
+    #     git checkout -b snapshots-${{ steps.generate_suffix.outputs.suffix }}
+    #     git add Schutzfile
+    #     git commit -m "schutzfile: Update snapshots to ${{ steps.generate_suffix.outputs.suffix }}"
+    #     git push https://${{ secrets.SCHUTZBOT_GH_TOKEN }}@github.com/schutzbot/osbuild-composer.git
 
 
 
-        cat <<EOF > "body"
-        Job(s) succeeded: ${{ steps.wait_for_jobs.outputs.succeeded }}
-        Job(s) failed: ${{ steps.wait_for_jobs.outputs.failed }}
-        Workflow run: https://github.com/osbuild/rpmrepo/actions/runs/${{ github.run_number }}
-        EOF
+    #     cat <<EOF > "body"
+    #     Job(s) succeeded: ${{ steps.wait_for_jobs.outputs.succeeded }}
+    #     Job(s) failed: ${{ steps.wait_for_jobs.outputs.failed }}
+    #     Workflow run: https://github.com/osbuild/rpmrepo/actions/runs/${{ github.run_number }}
+    #     EOF
 
-        gh pr create \
-          -t "Update snapshots to ${{ steps.generate_suffix.outputs.suffix }}" \
-          -F "body" \
-          --repo "osbuild/osbuild-composer" \
-          --base "main" \
-          --head "schutzbot:snapshots-${{ steps.generate_suffix.outputs.suffix }}"
-        popd
+    #     gh pr create \
+    #       -t "Update snapshots to ${{ steps.generate_suffix.outputs.suffix }}" \
+    #       -F "body" \
+    #       --repo "osbuild/osbuild-composer" \
+    #       --base "main" \
+    #       --head "schutzbot:snapshots-${{ steps.generate_suffix.outputs.suffix }}"
+    #     popd
 
