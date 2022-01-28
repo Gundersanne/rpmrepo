@@ -42,6 +42,7 @@ jobs:
             "jobId": "4c6f63d0-628c-465f-808f-ed36f1e030c5"
         }
         EOF
+        cat out.json
         # aws batch submit-job \
         #   --job-name "snapshot-runner" \
         #   --job-definition "rpmrepo-batch-snapshot-staging" \
