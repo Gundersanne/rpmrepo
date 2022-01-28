@@ -53,13 +53,13 @@ jobs:
         #   > out.json
         JOBID=$(jq -r .jobId out.json)
         echo JOB ID $JOBID
-        echo "::set-output name=job_id::$JOBID"
+        echo "::set-output name=jobid::$JOBID"
         echo "::set-output name=job_name::$(jq -r .jobName out.json)"
 
     - name: Wait for jobs to finish
       id: wait_for_jobs
       run: |
-        echo AAAAAAAAAAAAA ${{ steps.submit_job.job_id }}
+        echo AAAAAAAAAAAAA ${{ steps.submit_job.jobid }}
         while true; do
           PENDING=$(aws batch list-jobs --array-job-id ${{ steps.submit_job.job_id }} --job-status PENDING | jq '.jobSummaryList | length')
           RUNNABLE=$(aws batch list-jobs --array-job-id ${{ steps.submit_job.job_id }} --job-status RUNNABLE | jq '.jobSummaryList | length')
